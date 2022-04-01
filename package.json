@@ -1,0 +1,16 @@
+{
+  "name": "registry-listener",
+  "license": "UNLICENSED",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ con-ji/registry-listener",
+    "create-local": "graph create --node http://localhost:8020/ con-ji/registry-listener",
+    "remove-local": "graph remove --node http://localhost:8020/ con-ji/registry-listener",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 con-ji/registry-listener"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.29.0",
+    "@graphprotocol/graph-ts": "0.26.0"
+  }
+}
