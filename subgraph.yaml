@@ -1,36 +1,28 @@
-specVersion: 0.0.2
+specVersion: 0.0.3
 schema:
-  file: ./schema.graphql
+  file: schema.graphql
 dataSources:
-  - kind: ethereum
-    name: Contract
+  - kind: ethereum/contract
+    name: accesscontrol
     network: mainnet
     source:
       address: "0x47d1F3FDa174270244a1d800C49f3AF456f05004"
-      abi: Contract
+      abi: AccessControl
       startBlock: 12858884
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.5
       language: wasm/assemblyscript
       entities:
-        - Paused
-        - RoleAdminChanged
-        - RoleGranted
-        - RoleRevoked
-        - Unpaused
+        - AccessControl
       abis:
-        - name: Contract
-          file: ./abis/Contract.json
+        - name: AccessControl
+          file: ./abis/listener.json
       eventHandlers:
-        - event: Paused(address)
-          handler: handlePaused
         - event: RoleAdminChanged(indexed bytes32,indexed bytes32,indexed bytes32)
           handler: handleRoleAdminChanged
         - event: RoleGranted(indexed bytes32,indexed address,indexed address)
           handler: handleRoleGranted
         - event: RoleRevoked(indexed bytes32,indexed address,indexed address)
           handler: handleRoleRevoked
-        - event: Unpaused(address)
-          handler: handleUnpaused
-      file: ./src/mapping.ts
+      file: ./node_modules/@openzeppelin/subgraphs/src/datasources/accesscontrol.ts

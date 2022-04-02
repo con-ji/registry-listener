@@ -1,6 +1,6 @@
 {
   "mainnet": {
-    "Contract": {
+    "listener": {
       "address": "0x47d1F3FDa174270244a1d800C49f3AF456f05004"
     }
   }

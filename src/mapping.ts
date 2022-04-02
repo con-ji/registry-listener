@@ -1,69 +1,88 @@
-import { BigInt } from "@graphprotocol/graph-ts"
+import { store } from '@graphprotocol/graph-ts'
+
 import {
-  Contract,
-  Paused,
-  RoleAdminChanged,
-  RoleGranted,
-  RoleRevoked,
-  Unpaused
-} from "../generated/Contract/Contract"
-import { ExampleEntity } from "../generated/schema"
+	AccessControlRole,
+	AccessControlRoleMember,
+	RoleAdminChanged,
+	RoleGranted,
+	RoleRevoked,
+} from '../generated/schema'
 
-export function handlePaused(event: Paused): void {
-  // Entities can be loaded from the store using a string ID; this ID
-  // needs to be unique across all entities of the same type
-  let entity = ExampleEntity.load(event.transaction.from.toHex())
+import {
+	RoleAdminChanged as RoleAdminChangedEvent,
+	RoleGranted      as RoleGrantedEvent,
+	RoleRevoked      as RoleRevokedEvent,
+} from '../generated/accesscontrol/AccessControl'
 
-  // Entities only exist after they have been saved to the store;
-  // `null` checks allow to create entities on demand
-  if (!entity) {
-    entity = new ExampleEntity(event.transaction.from.toHex())
+import {
+	events,
+	transactions,
+} from '@amxx/graphprotocol-utils'
 
-    // Entity fields can be set using simple assignments
-    entity.count = BigInt.fromI32(0)
-  }
+import {
+	fetchAccount,
+} from '../generated/fetch/account'
 
-  // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
+import {
+	fetchRole,
+	fetchAccessControl,
+	fetchAccessControlRole,
+} from '../generated/fetch/accesscontrol'
 
-  // Entity fields can be set based on event parameters
-  entity.account = event.params.account
+export function handleRoleAdminChanged(event: RoleAdminChangedEvent): void {
+	let contract          = fetchAccessControl(event.address)
+	let accesscontrolrole = fetchAccessControlRole(contract, fetchRole(event.params.role))
+	let admin             = fetchAccessControlRole(contract, fetchRole(event.params.newAdminRole))
+	let previous          = fetchAccessControlRole(contract, fetchRole(event.params.previousAdminRole))
 
-  // Entities can be written to the store with `.save()`
-  entity.save()
+	accesscontrolrole.admin = admin.id
+	accesscontrolrole.save()
 
-  // Note: If a handler doesn't require existing field values, it is faster
-  // _not_ to load the entity from the store. Instead, create it fresh with
-  // `new Entity(...)`, set the fields that should be updated and save the
-  // entity back to the store. Fields that were not set or unset remain
-  // unchanged, allowing for partial updates to be applied.
-
-  // It is also possible to access smart contracts from mappings. For
-  // example, the contract that has emitted the event can be connected to
-  // with:
-  //
-  // let contract = Contract.bind(event.address)
-  //
-  // The following functions can then be called on this contract to access
-  // state variables and other data:
-  //
-  // - contract.DEFAULT_ADMIN_ROLE(...)
-  // - contract.authorized(...)
-  // - contract.denominator(...)
-  // - contract.fallbackRecipient(...)
-  // - contract.getRoleAdmin(...)
-  // - contract.hasRole(...)
-  // - contract.paused(...)
-  // - contract.strategistNames(...)
-  // - contract.supportsInterface(...)
-  // - contract.tokenMinting(...)
-  // - contract.weth(...)
+	let ev               = new RoleAdminChanged(events.id(event))
+	ev.emitter           = contract.id
+	ev.transaction       = transactions.log(event).id
+	ev.timestamp         = event.block.timestamp
+	ev.role              = accesscontrolrole.id
+	ev.newAdminRole      = admin.id
+	ev.previousAdminRole = previous.id
+	ev.save()
 }
 
-export function handleRoleAdminChanged(event: RoleAdminChanged): void {}
+export function handleRoleGranted(event: RoleGrantedEvent): void {
+	let contract          = fetchAccessControl(event.address)
+	let accesscontrolrole = fetchAccessControlRole(contract, fetchRole(event.params.role))
+	let account           = fetchAccount(event.params.account)
+	let sender            = fetchAccount(event.params.sender)
 
-export function handleRoleGranted(event: RoleGranted): void {}
+	let accesscontrolrolemember               = new AccessControlRoleMember(accesscontrolrole.id.concat('/').concat(account.id))
+	accesscontrolrolemember.accesscontrolrole = accesscontrolrole.id
+	accesscontrolrolemember.account           = account.id
+	accesscontrolrolemember.save()
 
-export function handleRoleRevoked(event: RoleRevoked): void {}
+	let ev         = new RoleGranted(events.id(event))
+	ev.emitter     = contract.id
+	ev.transaction = transactions.log(event).id
+	ev.timestamp   = event.block.timestamp
+	ev.role        = accesscontrolrole.id
+	ev.account     = account.id
+	ev.sender      = sender.id
+	ev.save()
+}
 
-export function handleUnpaused(event: Unpaused): void {}
+export function handleRoleRevoked(event: RoleRevokedEvent): void {
+	let contract          = fetchAccessControl(event.address)
+	let accesscontrolrole = fetchAccessControlRole(contract, fetchRole(event.params.role))
+	let account           = fetchAccount(event.params.account)
+	let sender            = fetchAccount(event.params.sender)
+
+	store.remove('AccessControlRoleMember', accesscontrolrole.id.concat('/').concat(account.id))
+
+	let ev         = new RoleRevoked(events.id(event))
+	ev.emitter     = contract.id
+	ev.transaction = transactions.log(event).id
+	ev.timestamp   = event.block.timestamp
+	ev.role        = accesscontrolrole.id
+	ev.account     = account.id
+	ev.sender      = sender.id
+	ev.save()
+}
